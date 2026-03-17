@@ -2,7 +2,51 @@
 
 The official DepthAnything implementation **[GitHub](https://github.com/LiheYoung/Depth-Anything.git)**. 
 
->The challenge aimed to estimate high-resolution depth maps from stereo or monocular images with ToM (transparent or mirror) surfaces.
+#### Divyavardhan Singh, Hammad Mohammad, Hariom Thacker, Kishor Upla, Kiran Raja
+> The challenge aimed to estimate high-resolution depth maps from stereo or monocular images containing Transparent or Mirror (ToM) surfaces.
+
+## Quick Links
+
+*   **[Pre-Trained Fine-Tuned Checkpoints (Google Drive)](https://drive.google.com/file/d/1DdHgyH8EvUapcacQfqX7ENlUjLn8sU3j/view?usp=drive_link)**
+*   **[Final Depth Results (Google Drive)](https://drive.google.com/file/d/1S25T2b6PWIwrOlOZcVOu3rQ0QUJg6qyf/view?usp=drive_link)**
+
+---
+
+## Architecture Pipeline
+
+Our pipeline adapts the strong zero-shot foundation of **Depth Anything V2 (ViT-L)**. It combats specular reflections by computing multi-scale gradient constraints strictly against boundaries labeled as ToM objects.
+
+```mermaid
+graph TD
+    classDef input fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000;
+    classDef preprocess fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000;
+    classDef backbone fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px,color:#000;
+    classDef head fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000;
+    classDef loss fill:#ffebee,stroke:#b71c1c,stroke-width:2px,stroke-dasharray: 5 5,color:#000;
+    classDef output fill:#e0f7fa,stroke:#006064,stroke-width:2px,color:#000;
+    classDef data fill:#eceff1,stroke:#37474f,stroke-width:1px,color:#000;
+
+    I1[("High-Res RGB Image\n(H x W x 3)")]:::input
+    P1["Preprocessor\n(Resize, Normalize)"]:::preprocess
+    
+    subgraph Backbone ["Depth Anything V2 Backbone"]
+        B1["Vision Transformer (ViT-L)\n(Frozen Ep 0, Low LR later)"]:::backbone
+        B2["DPT Decoder"]:::backbone
+    end
+    
+    subgraph Metric Head ["Metric Depth Head"]
+        H1["Raw Metric Depth Predictor"]:::head
+        U1["Bilinear Interpolation"]:::head
+    end
+    
+    I1 --> P1 --> B1 --> B2 --> H1 --> U1 -->|Predicted Depth| O1[("Final Depth Map")]:::output
+    
+    L1["SILog Loss (w: 1.0)"]:::loss
+    L2["MSG Loss (w: 0.5)"]:::loss
+    L3["Smooth L1 Loss (w: 0.1)\n(ToM receives 3x Penalty)"]:::loss
+    
+    O1 -.-> L1 & L2 & L3
+```
 
 ## Installation
 
@@ -33,9 +77,6 @@ A sample test.txt file is already present in dataset_paths
 
 
 ## Inference
-
-The pretrained checkpoints can be downloaded from **[Google Drive](https://drive.google.com/file/d/1DdHgyH8EvUapcacQfqX7ENlUjLn8sU3j/view?usp=sharing)**. 
-
 ```bash
 python run.py
 ```
@@ -129,7 +170,7 @@ python train.py --train_txt dataset_paths/train_extended.txt
 
 ``--save_every``: Frequency (in epochs) to save intermediate checkpoints. Default is 2.
 
--``-gpu_ids``: Comma-separated list of GPU IDs for DataParallel (e.g., 0,1).
+``--gpu_ids``: Comma-separated list of GPU IDs for DataParallel (e.g., 0,1).
 
 ``--use_ddp``: Flag to enable Distributed Data Parallel (DDP) for faster multi-GPU training.
 
@@ -154,8 +195,6 @@ If DVision's version helps your research or work, please consider citing the NTI
 }
 ```
 
-
-
 2. Also please consider citing Depth-Anything Official Paper.
 
 ```
@@ -166,6 +205,5 @@ If DVision's version helps your research or work, please consider citing the NTI
       year={2024}
 }
 ```
-
 
 ---
