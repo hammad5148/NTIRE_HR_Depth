@@ -1,4 +1,3 @@
-
 from tqdm import tqdm
 import numpy as np
 import math
@@ -8,7 +7,6 @@ import os
 from PIL import Image
 import argparse
 
-
 class Patches:
     def __init__(self, imgs, EM_indices):
         self.imgs = np.array(imgs)
@@ -16,7 +14,6 @@ class Patches:
         self._EM_indices = EM_indices
 
     def update(self, imgs, shift_indices):
-
         if not isinstance(shift_indices, Iterable):
             raise TypeError('param "shifted_indices is not iteratable."')
 
@@ -39,28 +36,11 @@ class Patches:
             self.imgs = self.old_imgs
             self.old_imgs = None
 
-
 class EMPatches(object):
     def __init__(self):
         pass
 
     def extract_patches(self, img, patchsize, overlap=None, stride=None):
-        '''
-        Parameters
-        ----------
-        img : image to extract patches from in [H W Ch] format.
-        patchsize :  size of patch to extract from image only square patches can be
-                     extracted for now.
-        overlap (Optional): overlap between patched in percentage a float between [0, 1].
-        stride (Optional): Step size between patches
-        Returns
-        -------
-        img_patches : a list containing extracted patches of images.
-        indices : a list containing indices of patches in order, whihc can be used
-                  at later stage for 'merging_patches'.
-
-        '''
-
         height = img.shape[0]
         width = img.shape[1]
         maxWindowSize = patchsize
@@ -74,15 +54,11 @@ class EMPatches(object):
             stepSizeY = stride
         elif overlap is not None:
             overlapPercent = overlap
-
             windowSizeX = maxWindowSize
             windowSizeY = maxWindowSize
-            # If the input data is smaller than the specified window size,
-            # clip the window size to the input size on both dimensions
             windowSizeX = min(windowSizeX, width)
             windowSizeY = min(windowSizeY, height)
 
-            # Compute the window overlap and step size
             windowOverlapX = int(math.floor(windowSizeX * overlapPercent))
             windowOverlapY = int(math.floor(windowSizeY * overlapPercent))
 
@@ -92,14 +68,11 @@ class EMPatches(object):
             stepSizeX = 1
             stepSizeY = 1
 
-        # Determine how many windows we will need in order to cover the input data
         lastX = width - windowSizeX
         lastY = height - windowSizeY
         xOffsets = list(range(0, lastX + 1, stepSizeX))
         yOffsets = list(range(0, lastY + 1, stepSizeY))
 
-        # Unless the input data dimensions are exact multiples of the step size,
-        # we will need one additional row and column of windows to get 100% coverage
         if len(xOffsets) == 0 or xOffsets[-1] != lastX:
             xOffsets.append(lastX)
         if len(yOffsets) == 0 or yOffsets[-1] != lastY:
@@ -118,51 +91,74 @@ class EMPatches(object):
                     img_patches.append(
                         img[(slice(yOffset, yOffset + windowSizeY), slice(xOffset, xOffset + windowSizeX))]
                     )
-            indices.append((yOffset, yOffset + windowSizeY, xOffset, xOffset + windowSizeX))
+                indices.append((yOffset, yOffset + windowSizeY, xOffset, xOffset + windowSizeX))
 
         return img_patches, indices
-    
-def parse_args():
 
+def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_txt', type=str, help = "path of dataset txt file having the path to <image> <depth> <mask>")
-    parser.add_argument('--save_dir', type=str, default="./dataset/train", help = "path to dir where dataset will be saved")
-    
+    parser.add_argument('--dataset_txt', type=str, help="path of dataset txt file having the path to <image> <depth> <mask>")
+    parser.add_argument('--save_dir', type=str, default="./dataset/train", help="path to dir where dataset will be saved")
     return parser.parse_args()
 
 if __name__ == '__main__':
     args = parse_args()
-
     emp = EMPatches()
 
     home_dir = os.path.abspath(args.save_dir)
-
     os.makedirs("./dataset_paths", exist_ok=True)
+    
+    # Define output file for the NEW patch-based dataset
+    output_txt_path = os.path.abspath("./dataset_paths/train_extended.txt")
 
-    with open(os.path.abspath("./dataset_paths/train_extended.txt"), 'w') as f2:
+    with open(output_txt_path, 'w') as f2:
         with open(args.dataset_txt, "r") as f1:
+            # Now reads 3 values per line
             for line in tqdm(f1):
-                image_path, target_path, mask_path = line.strip().split()
+                try:
+                    image_path, target_path, mask_path = line.strip().split()
+                except ValueError:
+                    print(f"Skipping malformed line: {line.strip()}")
+                    continue
+
+                # Load Images
                 img = Image.open(image_path)
                 img = np.array(img)
+                
                 mask = Image.open(mask_path)
                 mask = np.array(mask)
+                
                 depth = np.load(target_path)
+
+                # Extract Patches
                 img_patches, _ = emp.extract_patches(img, patchsize=1400, overlap=0.2)
                 mask_patches, _ = emp.extract_patches(mask, patchsize=1400, overlap=0.2)
                 depth_patches, _ = emp.extract_patches(depth, patchsize=1400, overlap=0.2)
-                temp = image_path.split('/')
-                dir_path = os.path.join(home_dir, temp[-3])
+
+                # Prepare Directory
+                # Using folder name (e.g., 'Bathroom') to organize output
+                folder_name = os.path.basename(os.path.dirname(os.path.dirname(image_path))) # Adjusts based on structure
+                if folder_name == "raw_training_data": # Fallback if structure differs
+                     folder_name = os.path.basename(os.path.dirname(image_path))
+                     
+                dir_path = os.path.join(home_dir, folder_name)
                 os.makedirs(dir_path, exist_ok=True)
-                for i, (x, y, z) in enumerate(zip(img_patches, mask_patches, depth_patches)):
-                    path_img = os.path.join(dir_path, f"{temp[-1].split('.')[0]}_{i}.npy")
-                    path_mask =os.path.join(dir_path, f"depth_{i}.npy") 
-                    path_dep = os.path.join(dir_path, f"mask_{i}.npy")
-                    if z.max()!=z.min():
-                        if np.sum(y)>0:
-                            np.save(path_img, x)
-                            np.save(path_mask, z)
-                            np.save(path_dep, y)
-                            f2.write(f"{path_img} {path_dep} {path_mask}\n")
 
+                # Get base filename (e.g., 'im0') to prefix files
+                base_filename = os.path.splitext(os.path.basename(image_path))[0]
 
+                for i, (p_img, p_mask, p_depth) in enumerate(zip(img_patches, mask_patches, depth_patches)):
+                    # Construct Paths
+                    # We add base_filename so im0 patches don't overwrite im1 patches
+                    path_img_save = os.path.join(dir_path, f"{base_filename}_{i}_img.npy")
+                    path_depth_save = os.path.join(dir_path, f"{base_filename}_{i}_depth.npy")
+                    path_mask_save = os.path.join(dir_path, f"{base_filename}_{i}_mask.npy")
+
+                    if p_depth.max() != p_depth.min():
+                        if np.sum(p_mask) > 0:
+                            np.save(path_img_save, p_img)
+                            np.save(path_depth_save, p_depth)
+                            np.save(path_mask_save, p_mask)
+                            
+                            # Write formatted line: IMG DEPTH MASK
+                            f2.write(f"{path_img_save} {path_depth_save} {path_mask_save}\n")
