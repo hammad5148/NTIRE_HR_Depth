@@ -2,8 +2,6 @@
 
 The official DepthAnything implementation **[GitHub](https://github.com/LiheYoung/Depth-Anything.git)**. 
 
-#### Sourav Saini, Aashray Gupta, Sahaj K. Mistry, Aryan Shukla  **[Paper Link](https://openaccess.thecvf.com/content/CVPR2024W/NTIRE/papers/Ramirez_NTIRE_2024_Challenge_on_HR_Depth_from_Images_of_Specular_CVPRW_2024_paper.pdf)**
-
 >The challenge aimed to estimate high-resolution depth maps from stereo or monocular images with ToM (transparent or mirror) surfaces.
 
 ## Installation
@@ -39,28 +37,47 @@ A sample test.txt file is already present in dataset_paths
 The pretrained checkpoints can be downloaded from **[Google Drive](https://drive.google.com/file/d/161k7IJgATeDRADCF76ztvWA3KtrIX0Lz/view?usp=sharing)**. 
 
 ```bash
-python run.py [--grayscale]
+python run.py
 ```
-Arguments:
-- ``--img-path``: you can either 1) point it to an image directory storing all interested images, 2) point it to a single image, or 3) point it to a text file storing all image paths.
-- ``-p``: path to models checkpoints. (Present in checkpoints_new folder)
-- ``--outdir``: path to dir to save the output depths
-- ``-width``: width of output depth map
-- ``-height``: height of output depth map
-- ``--grayscale``: is set to save the grayscale depth map. Without it, by default, we apply a color palette to the depth map.
+### Arguments:
+#### Input/Output:
 
-For example:
-```bash
-python run.py --img-path dataset_paths/test.txt --outdir depth_vis --grayscale
-```
-The outputs will be saved in ``depth_vis`` folder  
+``--img-path``: Point it to an image directory storing all interested images, a single image, or a text file storing all image paths.
+
+``-p``: Path to model checkpoints (Present in checkpoints_new folder).
+
+``--outdir``: Path to the directory to save the output depths.
+
+``-width``: Force output width. Default: use the original image width.
+
+``-height``: Force output height. Default: use the original image height.
+
+``--grayscale``: Set to save the grayscale depth map. Without it, a color palette is applied by default.
+
+#### Model & Processing:
+
+``--encoder``: DAV2 encoder size (choices: vits, vitb, vitl). Must match training. Default: vitl (335M).
+
+``--max_depth``: Max depth used during training in meters (must match train.py). Default: 20.0 (for Booster indoor).
+
+``--scene_max_cm``: Realistic max scene depth in cm for Hugging Face output rescaling. Increase if PNG looks too dark; decrease if too bright. Default: 200.0. (Has no effect when using native metric DAV2).
+
+``--invert``: Force depth inversion. Auto-applied for HF backend, but use this flag if native DAV2 output also looks inverted.
+
+``--input_size``: Spatial size fed to DAV2 (must be divisible by 14). Default: 518.
+
+#### Speed & Optimization:
+
+``--no_tta``: Disable Test-Time Augmentation. Makes processing 3× faster with slightly lower accuracy.
+
+``--no_amp``: Disable AMP float16. Use this if you get NaN errors on older GPUs. 
 
 ## Training dataset creation
 
 ```bash
 python dataset_creation.py --dataset_txt ./dataset_paths/train_data.txt
 ```
-Arguments:
+### Arguments:
 - ``--dataset_txt``: path to dataset txt having format <image_path.png> <depth_path.npy> <mask_path.png>
 - ``--save_dir``: dir path to save the patched dataset
 
@@ -74,25 +91,54 @@ Pass this text file in the ``train_txt`` argument of the training command
 
 ## Training
 
+To start training with the default settings:
 ```bash
 python train.py --train_txt dataset_paths/train_extended.txt
 ```
-Arguments:
-- ``--train_txt``: path to train txt
-- ``--checkpoints-dir``: dir path to save the model's checkpoints
-- ``--should-log``: wandb log 1) 1: enable 2) 0: disable
-- ``--batch-size``: batch size
-- ``--w``: width of target depth map
-- ``--h``: height of target depth map
-- ``--epochs``: no of epoch
-- ``--lr``: learning rate
+### Arguments:
+
+``--train_txt``: Path to the text file containing the dataset paths (format: image, depth, valid_mask, [tom_mask]).
+
+``--checkpoints_dir``: Directory path to save the model's checkpoints.
+
+``--checkpoints_dir``: Path to the pre-trained Depth Anything V2 metric weights (e.g., depth_anything_v2_metric_hypersim_vitl.pth).
+
+``--load_checkpoint``: Path to a specific .pt file to resume fine-tuning.
+
+``--encoder``: Choice of ViT backbone (vits, vitb, vitl). Default is vitl.
+
+``--max_depth``: Maximum depth in meters for the metric head. Default is 20.0.
+
+``--depth_scale``: Multiplier for raw depth values (e.g., use 0.001 if your depth maps are stored in millimeters). Default is 1.0.
+
+``--batch_size``: Number of samples per batch. Default is 4.
+
+``--epochs``: Total number of training epochs. Default is 10.
+
+``--lr_backbone``: Learning rate for the frozen/unfrozen ViT backbone. Default is 1e-5.
+
+``--lr_head``: Learning rate for the depth decoder/head. Default is 5e-5.
+
+``--weight_decay``: Weight decay for the AdamW optimizer. Default is 1e-2.
+
+``--input_size``: The square size (height and width) of the image fed to DAV2. Must be divisible by 14. Default is 518.
+
+``--amp``: Flag to enable Automatic Mixed Precision (float16) training for faster execution.
+
+``--patience``: Number of epochs to wait for an improvement in abs_rel before triggering early stopping. Default is 5.
+
+``--save_every``: Frequency (in epochs) to save intermediate checkpoints. Default is 2.
+
+-``-gpu_ids``: Comma-separated list of GPU IDs for DataParallel (e.g., 0,1).
+
+``--use_ddp``: Flag to enable Distributed Data Parallel (DDP) for faster multi-GPU training.
 
 For example:
 ```bash
 python train.py --train_txt dataset_paths/train_extended.txt --should-log 0 --batch_size 2 --epochs 10 
 ```
 
-### Citations
+## Citations
 If DVision's version helps your research or work, please consider citing the NTIRE 2024 Challenge Paper.
 
 1. NTIRE 2024 Challenge on HR Depth from Images of Specular and Transparent Surfaces
@@ -121,9 +167,5 @@ If DVision's version helps your research or work, please consider citing the NTI
 }
 ```
 
-
-### Contact
-
-If you have any questions, please contact souravsaini0118@gmail.com
 
 ---
