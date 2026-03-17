@@ -1,4 +1,4 @@
-# This repo contains the DVision team's solution to the NTIRE HR Depth-Mono Challenge
+# This repo contains the CV_SVNIT team's solution to the NTIRE HR Depth-Mono Challenge 2026
 
 The official DepthAnything implementation **[GitHub](https://github.com/LiheYoung/Depth-Anything.git)**. 
 
@@ -34,7 +34,7 @@ A sample test.txt file is already present in dataset_paths
 
 ## Inference
 
-The pretrained checkpoints can be downloaded from **[Google Drive](https://drive.google.com/file/d/161k7IJgATeDRADCF76ztvWA3KtrIX0Lz/view?usp=sharing)**. 
+The pretrained checkpoints can be downloaded from **[Google Drive](https://drive.google.com/file/d/1DdHgyH8EvUapcacQfqX7ENlUjLn8sU3j/view?usp=sharing)**. 
 
 ```bash
 python run.py
