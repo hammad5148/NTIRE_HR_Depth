@@ -1,4 +1,4 @@
-# This repo contains the CV_SVNIT team's solution to the NTIRE HR Depth-Mono Challenge 2026
+# This repo contains the hello_w team's solution to the NTIRE HR Depth-Mono Challenge 2026
 
 The official DepthAnything implementation **[GitHub](https://github.com/LiheYoung/Depth-Anything.git)**. 
 
@@ -7,11 +7,10 @@ The official DepthAnything implementation **[GitHub](https://github.com/LiheYoun
 
 ## Quick Links
 
-*   **[Pre-Trained Fine-Tuned Checkpoints (Google Drive)](https://drive.google.com/file/d/1DdHgyH8EvUapcacQfqX7ENlUjLn8sU3j/view?usp=drive_link)**
-*   **[Final Depth Results (Google Drive)](https://drive.google.com/file/d/1S25T2b6PWIwrOlOZcVOu3rQ0QUJg6qyf/view?usp=drive_link)**
+*   **[Pre-Trained Fine-Tuned Checkpoints](https://drive.google.com/file/d/1DdHgyH8EvUapcacQfqX7ENlUjLn8sU3j/view?usp=drive_link)**
+*   **[Depth Results](https://drive.google.com/file/d/1S25T2b6PWIwrOlOZcVOu3rQ0QUJg6qyf/view?usp=drive_link)**
 
 ---
-
 ## Architecture Pipeline
 
 Our pipeline adapts the strong zero-shot foundation of **Depth Anything V2 (ViT-L)**. It combats specular reflections by computing multi-scale gradient constraints strictly against boundaries labeled as ToM objects.
@@ -56,7 +55,29 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
+---
+## Test Data
 
+The test dataset can be downloaded from:
+**[Test Dataset](https://onedrive.live.com/?redeem=aHR0cHM6Ly8xZHJ2Lm1zL3UvcyFBZ1Y0OUQxWjZybUdnWTFRWWRqVlR0OWpZV0FubHc%5FZT0xdm05YkQ&cid=86B9EA593DF47805&id=86B9EA593DF47805%2118128&parId=86B9EA593DF47805%2118122&o=OneUp)**
+
+### Steps to Download & Unzip
+
+* Download the dataset and save the zip file.
+
+* Unzip into the `dataset/` folder inside the repo:
+
+#### Windows (PowerShell)
+```powershell
+# Run from the repo root
+Expand-Archive -Path "$HOME\Downloads\test_mono_nogt.zip" -DestinationPath ".\dataset\"
+```
+#### Linux / macOS
+```bash
+# Run from the repo root
+unzip ~/Downloads/test_mono_nogt.zip -d dataset/
+```
+---
 ## Test file creation
 
 Change the path in ``dataset_dir`` to the directory having the testing dataset. 
