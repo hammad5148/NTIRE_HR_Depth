@@ -3,7 +3,7 @@ from glob import glob
 
 if __name__ == '__main__':
     # Using your full Windows paths
-    dataset_dir = "C./dataset/test_mono_nogt"
+    dataset_dir = "./dataset/test_mono_nogt"
     output_path = "./dataset_paths/test.txt"
     
     out_dir = os.path.dirname(output_path)
