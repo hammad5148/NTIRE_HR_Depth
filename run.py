@@ -306,15 +306,15 @@ def parse_args():
 
     # ── Input / output ────────────────────────────────────────────────────────
     p.add_argument('--img-path', type=str,
-        default="/kaggle/working/NTIRE-HR_Depth-DVision/dataset_paths/test.txt",
+        default="./dataset_paths/test.txt",
         help="Text file of image paths, a glob, or a directory.")
     p.add_argument('--outdir', type=str,
-        default='/kaggle/working/NTIRE-HR_Depth-DVision/vis_depth',
+        default='./vis_depth',
         help="Root output directory for submission PNGs.")
 
     # ── Checkpoint ────────────────────────────────────────────────────────────
     p.add_argument('-p', '--checkpoints', type=str,
-        default="/kaggle/input/datasets/hammad1289/latest-hr-depth-weight-16-march/model_best (1).pt",
+        default="./checkpoints_new/47.37_weights.pt",
         help="Path to fine-tuned .pt state-dict checkpoint.")
 
     # ── Model ─────────────────────────────────────────────────────────────────
