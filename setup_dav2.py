@@ -50,7 +50,7 @@ except Exception as e:
     print(f"[Setup] Note: could not write .pth file ({e}). Using sys.path for this session.")
 
 # ── 4. Download the metric weights (ViT-L, Hypersim) ──────────────────────────
-WEIGHTS_DIR  = "/kaggle/working/NTIRE-HR_Depth-DVision/checkpoints_new/pretrained"
+WEIGHTS_DIR  = "/kaggle/working/NTIRE_HR_Depth/checkpoints_new/pretrained"
 WEIGHTS_FILE = os.path.join(WEIGHTS_DIR, "depth_anything_v2_metric_hypersim_vitl.pth")
 
 os.makedirs(WEIGHTS_DIR, exist_ok=True)
