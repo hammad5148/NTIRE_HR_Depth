@@ -555,10 +555,10 @@ def parse_args():
     p = argparse.ArgumentParser("NTIRE 2026 HR Depth – ToM Surfaces")
 
     p.add_argument('--train_txt', default=
-        "/kaggle/working/NTIRE-HR_Depth-DVision/dataset_paths/train_extended.txt")
+        "/kaggle/working/NTIRE_HR_Depth/dataset_paths/train_extended.txt")
     p.add_argument('--checkpoints_dir', default=
-        "/kaggle/working/NTIRE-HR_Depth-DVision/checkpoints_new")
-    p.add_argument('--pretrained_weights', default="/kaggle/working/NTIRE-HR_Depth-DVision/checkpoints_new/pretrained/depth_anything_v2_metric_hypersim_vitl.pth",
+        "/kaggle/working/NTIRE_HR_Depth/checkpoints_new")
+    p.add_argument('--pretrained_weights', default="/kaggle/working/NTIRE_HR_Depth/checkpoints_new/pretrained/depth_anything_v2_metric_hypersim_vitl.pth",
         help="Path to DAV2 metric .pth  (depth_anything_v2_metric_hypersim_vitl.pth)")
     p.add_argument('--load_checkpoint', default=None,
         help="Resume fine-tuning from this checkpoint")
