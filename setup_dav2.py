@@ -51,13 +51,21 @@ WEIGHTS_FILE = os.path.join(WEIGHTS_DIR, "depth_anything_v2_metric_hypersim_vitl
 os.makedirs(WEIGHTS_DIR, exist_ok=True)
 
 if not os.path.exists(WEIGHTS_FILE):
-    print("\n[Setup] Downloading DAV2 metric weights (~1.4 GB)...")
-    run(
-        f"huggingface-cli download "
-        f"depth-anything/Depth-Anything-V2-Metric-Hypersim-Large "
-        f"depth_anything_v2_metric_hypersim_vitl.pth "
-        f"--local-dir {WEIGHTS_DIR}"
-    )
+    print("\n[Setup] Downloading DAV2 metric weights (~1.4 GB) via Python API...")
+    try:
+        from huggingface_hub import hf_hub_download
+        hf_hub_download(
+            repo_id   = "depth-anything/Depth-Anything-V2-Metric-Hypersim-Large",
+            filename  = "depth_anything_v2_metric_hypersim_vitl.pth",
+            local_dir = WEIGHTS_DIR,
+        )
+        print(f"[Setup] Weights downloaded to {WEIGHTS_FILE}")
+    except Exception as e:
+        print(f"[Setup] huggingface_hub failed ({e}). Trying wget fallback...")
+        url = ("https://huggingface.co/depth-anything/"
+               "Depth-Anything-V2-Metric-Hypersim-Large/resolve/main/"
+               "depth_anything_v2_metric_hypersim_vitl.pth")
+        run(f"wget -q --show-progress -O {WEIGHTS_FILE} {url}")
 else:
     print(f"[Setup] Weights already present at {WEIGHTS_FILE}, skipping download.")
 
