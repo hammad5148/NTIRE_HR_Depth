@@ -1,12 +1,13 @@
-gradio_imageslider
-gradio==4.14.0
 torch --index-url https://download.pytorch.org/whl/cu118
 torchvision --index-url https://download.pytorch.org/whl/cu118
 torchaudio --index-url https://download.pytorch.org/whl/cu118
 opencv-python
+opencv-contrib-python
 huggingface_hub
 pillow
 transformers
 DISTS_pytorch
 pytorch_msssim
 tqdm
+scipy
+timm
