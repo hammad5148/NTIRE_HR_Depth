@@ -108,10 +108,10 @@ class MultiScaleGradientLoss(nn.Module):
 
 
 class CombinedDepthLoss(nn.Module):
-    def __init__(self, w_silog=1.0, w_grad=0.8, w_l1=0.2, tom_weight=5.0):
+    def __init__(self, w_silog=1.0, w_grad=0.8, w_l1=0.2, tom_weight=5.0, grad_scales=4):
         super().__init__()
         self.silog     = SILogLoss()
-        self.grad      = MultiScaleGradientLoss(scales=4)
+        self.grad      = MultiScaleGradientLoss(scales=grad_scales)
         self.smooth_l1 = nn.SmoothL1Loss(reduction='none', beta=0.1)
         self.w_silog   = w_silog
         self.w_grad    = w_grad
@@ -368,7 +368,8 @@ class Trainer:
         self.dl_val   = dl_val
 
         self.criterion = CombinedDepthLoss(
-            w_silog=1.0, w_grad=0.8, w_l1=0.2, tom_weight=5.0)
+            w_silog=1.0, w_grad=0.8, w_l1=0.2, tom_weight=5.0,
+            grad_scales=2)   # 2 scales (not 4) to save GPU memory with native DAV2
 
         # ── Differential LR: lower for ViT backbone, higher for metric head ──
         raw = unwrap(model)
@@ -555,10 +556,10 @@ def parse_args():
     p = argparse.ArgumentParser("NTIRE 2026 HR Depth – ToM Surfaces")
 
     p.add_argument('--train_txt', default=
-        "/kaggle/working/NTIRE_HR_Depth/dataset_paths/train_extended.txt")
+        "/kaggle/working/NTIRE-HR_Depth-DVision/dataset_paths/train_extended.txt")
     p.add_argument('--checkpoints_dir', default=
-        "/kaggle/working/NTIRE_HR_Depth/checkpoints_new")
-    p.add_argument('--pretrained_weights', default="/kaggle/working/NTIRE_HR_Depth/checkpoints_new/pretrained/depth_anything_v2_metric_hypersim_vitl.pth",
+        "/kaggle/working/NTIRE-HR_Depth-DVision/checkpoints_new")
+    p.add_argument('--pretrained_weights', default="/kaggle/working/NTIRE-HR_Depth-DVision/checkpoints_new/pretrained/depth_anything_v2_metric_hypersim_vitl.pth",
         help="Path to DAV2 metric .pth  (depth_anything_v2_metric_hypersim_vitl.pth)")
     p.add_argument('--load_checkpoint', default=None,
         help="Resume fine-tuning from this checkpoint")
@@ -569,7 +570,7 @@ def parse_args():
     p.add_argument('--depth_scale',  type=float, default=1.0,
         help="Multiply raw depth values by this; use 0.001 if stored in mm")
 
-    p.add_argument('--batch_size',   type=int,   default=4)
+    p.add_argument('--batch_size',   type=int,   default=2)   # 2 is safe for DAV2-L on 15 GB GPU
     p.add_argument('--epochs',       type=int,   default=25)
     p.add_argument('--lr_backbone',  type=float, default=5e-6)
     p.add_argument('--lr_head',      type=float, default=1e-4)
@@ -592,6 +593,9 @@ def parse_args():
 # ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == '__main__':
+    # Reduce CUDA memory fragmentation — critical when backbone unfreezes at epoch 2
+    os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF', 'expandable_segments:True')
+
     args = parse_args()
     set_seed(42)
 
