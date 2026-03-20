@@ -108,7 +108,7 @@ class MultiScaleGradientLoss(nn.Module):
 
 
 class CombinedDepthLoss(nn.Module):
-    def __init__(self, w_silog=1.0, w_grad=0.5, w_l1=0.1, tom_weight=3.0):
+    def __init__(self, w_silog=1.0, w_grad=0.8, w_l1=0.2, tom_weight=5.0):
         super().__init__()
         self.silog     = SILogLoss()
         self.grad      = MultiScaleGradientLoss(scales=4)
@@ -209,13 +209,29 @@ class BoosterDepthDataset(Dataset):
 
         # ── Augmentation ──────────────────────────────────────────────────────
         if self.augment:
-            if random.random() < 0.5:                   # horizontal flip
+            import cv2
+            # 1. Random crop + scale
+            if random.random() < 0.3:
+                h, w = raw.shape[:2]
+                scale = random.uniform(0.8, 1.0)
+                nh, nw = int(h*scale), int(w*scale)
+                y0 = random.randint(0, h-nh)
+                x0 = random.randint(0, w-nw)
+                raw = cv2.resize(raw[y0:y0+nh, x0:x0+nw], (w,h), interpolation=cv2.INTER_LANCZOS4)
+                tgt = cv2.resize(tgt[y0:y0+nh, x0:x0+nw], (w,h), interpolation=cv2.INTER_NEAREST)
+                msk = cv2.resize(msk[y0:y0+nh, x0:x0+nw].astype(np.uint8), (w,h), interpolation=cv2.INTER_NEAREST).astype(bool)
+                if tom is not None:
+                    tom = cv2.resize(tom[y0:y0+nh, x0:x0+nw].astype(np.uint8), (w,h), interpolation=cv2.INTER_NEAREST).astype(bool)
+
+            # 2. Horizontal flip
+            if random.random() < 0.5:
                 raw = np.ascontiguousarray(raw[:, ::-1, :])
                 tgt = np.ascontiguousarray(tgt[:, ::-1])
                 msk = np.ascontiguousarray(msk[:, ::-1])
                 if tom is not None:
                     tom = np.ascontiguousarray(tom[:, ::-1])
 
+            # 3. Color jitter
             img_t = torch.from_numpy(raw).permute(2, 0, 1).float() / 255.0
             bri = 1.0 + random.uniform(-0.20, 0.20)
             con = 1.0 + random.uniform(-0.20, 0.20)
@@ -224,6 +240,11 @@ class BoosterDepthDataset(Dataset):
             img_t = TF.adjust_contrast(img_t,   con)
             img_t = TF.adjust_saturation(img_t, sat)
             raw   = (img_t.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
+
+            # 4. Gaussian noise
+            if random.random() < 0.2:
+                noise = np.random.normal(0, 5, raw.shape).astype(np.int16)
+                raw = np.clip(raw.astype(np.int16) + noise, 0, 255).astype(np.uint8)
 
         pv   = self._preprocess(raw)
         tgt_t = torch.from_numpy(tgt).float()
@@ -347,7 +368,7 @@ class Trainer:
         self.dl_val   = dl_val
 
         self.criterion = CombinedDepthLoss(
-            w_silog=1.0, w_grad=0.5, w_l1=0.1, tom_weight=3.0)
+            w_silog=1.0, w_grad=0.8, w_l1=0.2, tom_weight=5.0)
 
         # ── Differential LR: lower for ViT backbone, higher for metric head ──
         raw = unwrap(model)
@@ -395,10 +416,10 @@ class Trainer:
     def train_epoch(self, epoch: int):
         self.model.train()
 
-        # Epoch 0: freeze ViT backbone to not destroy strong synthetic priors
-        # Epoch 1+: unfreeze at low LR to allow domain adaptation
+        # Epoch 0-1: freeze ViT backbone to not destroy strong synthetic priors
+        # Epoch 2+: unfreeze at low LR to allow domain adaptation
         if DAV2_NATIVE and hasattr(unwrap(self.model), 'pretrained'):
-            freeze = (epoch == 0)
+            freeze = (epoch < 2)
             for p in unwrap(self.model).pretrained.parameters():
                 p.requires_grad_(not freeze)
             if self.is_main:
@@ -537,7 +558,7 @@ def parse_args():
         "/kaggle/working/NTIRE-HR_Depth-DVision/dataset_paths/train_extended.txt")
     p.add_argument('--checkpoints_dir', default=
         "/kaggle/working/NTIRE-HR_Depth-DVision/checkpoints_new")
-    p.add_argument('--pretrained_weights', default="/kaggle/input/datasets/hammad1289/latest-hr-depth-weight-16-march/model_best (1).pt",
+    p.add_argument('--pretrained_weights', default="/kaggle/working/NTIRE-HR_Depth-DVision/checkpoints_new/pretrained/depth_anything_v2_metric_hypersim_vitl.pth",
         help="Path to DAV2 metric .pth  (depth_anything_v2_metric_hypersim_vitl.pth)")
     p.add_argument('--load_checkpoint', default=None,
         help="Resume fine-tuning from this checkpoint")
@@ -549,10 +570,10 @@ def parse_args():
         help="Multiply raw depth values by this; use 0.001 if stored in mm")
 
     p.add_argument('--batch_size',   type=int,   default=4)
-    p.add_argument('--epochs',       type=int,   default=10)
-    p.add_argument('--lr_backbone',  type=float, default=1e-5)
-    p.add_argument('--lr_head',      type=float, default=5e-5)
-    p.add_argument('--weight_decay', type=float, default=1e-2)
+    p.add_argument('--epochs',       type=int,   default=25)
+    p.add_argument('--lr_backbone',  type=float, default=5e-6)
+    p.add_argument('--lr_head',      type=float, default=1e-4)
+    p.add_argument('--weight_decay', type=float, default=5e-3)
     p.add_argument('--input_size',   type=int,   default=518,
         help="Image size fed to DAV2 (must be divisible by 14)")
     p.add_argument('--amp',          action='store_true', default=True)
