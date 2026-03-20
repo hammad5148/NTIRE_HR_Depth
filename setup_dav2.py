@@ -28,21 +28,26 @@ if not os.path.exists(DAV2_DIR):
 else:
     print(f"[Setup] DAV2 repo already exists at {DAV2_DIR}, skipping clone.")
 
-# ── 3. Add DAV2 to Python path (repo has no setup.py/pyproject.toml) ──────────
-# Approach A: inject into current session immediately
-if DAV2_DIR not in sys.path:
-    sys.path.insert(0, DAV2_DIR)
-    print(f"[Setup] Added {DAV2_DIR} to sys.path for this session.")
+# ── 3. Add DAV2 METRIC path to Python path ────────────────────────────────────
+# The repo has TWO versions of DepthAnythingV2:
+#   - depth_anything_v2/dpt.py          (ROOT)         → relative depth, NO max_depth
+#   - metric_depth/depth_anything_v2/dpt.py (SUBFOLDER) → metric depth,  HAS max_depth ✓
+# We must point sys.path to metric_depth/ so the correct class is imported.
+DAV2_METRIC_DIR = os.path.join(DAV2_DIR, "metric_depth")
 
-# Approach B: write a .pth file so ALL future Python sessions see it too
+if DAV2_METRIC_DIR not in sys.path:
+    sys.path.insert(0, DAV2_METRIC_DIR)
+    print(f"[Setup] Added {DAV2_METRIC_DIR} to sys.path for this session.")
+
+# Also write .pth file pointing to metric_depth/ for future sessions
 try:
     site_pkgs = site.getsitepackages()[0]
     pth_file  = os.path.join(site_pkgs, "depth_anything_v2.pth")
     with open(pth_file, "w") as f:
-        f.write(DAV2_DIR + "\n")
-    print(f"[Setup] Wrote {pth_file} — import persists across kernel restarts.")
+        f.write(DAV2_METRIC_DIR + "\n")
+    print(f"[Setup] Wrote {pth_file} → import persists across kernel restarts.")
 except Exception as e:
-    print(f"[Setup] Note: could not write .pth file ({e}). Use sys.path injection only.")
+    print(f"[Setup] Note: could not write .pth file ({e}). Using sys.path for this session.")
 
 # ── 4. Download the metric weights (ViT-L, Hypersim) ──────────────────────────
 WEIGHTS_DIR  = "/kaggle/working/NTIRE-HR_Depth-DVision/checkpoints_new/pretrained"
